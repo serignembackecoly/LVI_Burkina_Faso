@@ -3,8 +3,8 @@
 **Data:**
 
 * Survey data collected from 600 households in 9 villages across 3 climatic zones in Burkina Faso.
-* Meteorological data from 15 stations covering the study area from 2000 to 2020.
-* ACLED data on conflict events in Burkina Faso from 2010 to 2020.
+* Meteorological data from 3 stations covering the study area from 2001 to 2021.
+* ACLED data on conflict events in Burkina Faso from 2012 to 2021.
 
 **Methodology:**
 
@@ -21,7 +21,3 @@
 
 * The code is written in R and is organized into several scripts for data preprocessing, LVI calculation, and analysis.
 * Dependencies: `tidyverse`, `coin`, `knitr`, `scale`, `kableExtra`, and other relevant packages.
-
-**License:**
-
-* MIT License
