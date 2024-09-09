@@ -401,47 +401,93 @@ I_Gaoua <- sum(Insecurity[, 4])
 I <- data.frame(rbind(I_Kongoussi, I_Leo, I_Gaoua))
 
 # NATURAL DISASTER AND CLIMATE VARIABILITY (ND) ##
-# Wet Season
 
-# Calculate the percentage distribution of the previous rainy season's quality by province
-Wet_season <- Mydata %>%
-  count(`Province (Zone agro-climatique)`, `Comment qualifierez vous la saison des pluies précédente ?`) %>%       
-  group_by(`Province (Zone agro-climatique)`) %>%
-  mutate(pct_Season = prop.table(n))
-
+# Calculate the distribution 
 floods <- Mydata %>%
   count(`Province (Zone agro-climatique)`, `Quel est en moyenne le nombre d’inondations survenu pendant les 3 dernières années ?`) %>%       
-  group_by(`Province (Zone agro-climatique)`) %>%
-  mutate(pct_Season = prop.table(n))
+  group_by(`Province (Zone agro-climatique)`) 
 
-# Define normalized data for different metrics
-# ND1 represents some aggregated measure for each province
-ND1 <- data.frame(c((0.039 + 0.117 + 0.065) / 3, 
-                    (0.254 + 0.292 + 0.224) / 3, 
-                    (0.352 + 0.338 + 0.514) / 3))
+drought <- Mydata %>%
+  count(`Province (Zone agro-climatique)`, `Quel est en moyenne le nombre secheresse / poches de sécheresse survenu pendant les 3 dernières années ?`) %>%       
+  group_by(`Province (Zone agro-climatique)`)
 
-# ND2 represents another aggregated measure
-ND2 <- data.frame(c((2.987 + 2.922 + 2.883) / 3, 
-                    (0.349 + 0.125 + 0.224) / 3, 
-                    (0.676 + 0.235 + 0.414) / 3))
 
-# ND3 represents yet another aggregated measure
-ND3 <- data.frame(c((4.776 + 4.714 + 4.961) / 3, 
-                    (2.794 + 2.653 + 2.716) / 3, 
-                    (3.324 + 2.985 + 3.333) / 3))
+Wet_season <- Mydata %>%
+  count(`Province (Zone agro-climatique)`, `Comment qualifierez vous la saison des pluies précédente ?`) %>%       
+  group_by(`Province (Zone agro-climatique)`) 
 
-# Define other normalized data for different metrics
-ND4 <- data.frame(c(2.470, 2.380, 2.040))
-ND5 <- data.frame(c(2.180, 2.040, 1.970))
-ND6 <- data.frame(c(4.890, 5.350, 7.390))
+type_season <- Wet_season %>% 
+  mutate(score = case_match(`Comment qualifierez vous la saison des pluies précédente ?`,
+                            "Très bonne" ~ 1,
+                            "Bonne" ~ 2,
+                            "Normale" ~ 3,
+                            "Mauvaise" ~ 4,
+                            "Très mauvaise" ~ 5))
 
-# Calculate the average normalized data for each province
-ND_Kongoussi <- (0.489 + 0.488 + 0.494) / 3
-ND_Leo <- (0.304 + 0.291 + 0.294) / 3
-ND_Gaoua <- (0.348 + 0.315 + 0.347) / 3
+# Rename with short names
+type_season <- type_season %>%
+  rename(province = `Province (Zone agro-climatique)`,
+         type = `Comment qualifierez vous la saison des pluies précédente ?`)
+
+floods <- floods %>%
+  rename(province = `Province (Zone agro-climatique)`,
+         inondations = `Quel est en moyenne le nombre d’inondations survenu pendant les 3 dernières années ?`)
+
+drought <- drought %>%
+  rename(province = `Province (Zone agro-climatique)`,
+         secheresse = `Quel est en moyenne le nombre secheresse / poches de sécheresse survenu pendant les 3 dernières années ?`)
+
+# Calcul weighted mean
+resultats_fl <- floods %>% 
+  group_by(province) %>% 
+  summarise(moyenne_ponderee = weighted.mean(inondations, n))
+
+resultats_dr <- drought %>% 
+  group_by(province) %>% 
+  summarise(moyenne_ponderee = weighted.mean(secheresse, n))
+
+resultats_ts <- type_season %>% 
+  group_by(province) %>% 
+  summarise(moyenne_ponderee = weighted.mean(score, n))
+
+# ND1 number of flood events
+ND1 <- data.frame(resultats_fl$moyenne_ponderee)
+max_floods <- max(Mydata$`Quel est en moyenne le nombre d’inondations survenu pendant les 3 dernières années ?`)
+min_floods <- min(Mydata$`Quel est en moyenne le nombre d’inondations survenu pendant les 3 dernières années ?`)
+ND1_rescaled <- scales::rescale(as.numeric(ND1$resultats.moyenne_ponderee), to = c(0, 1), from = c(min_floods, max_floods))
+
+# ND2 number of drought events
+ND2 <- data.frame(resultats_dr$moyenne_ponderee)
+max_drought <- max(Mydata$`Quel est en moyenne le nombre secheresse / poches de sécheresse survenu pendant les 3 dernières années ?`)
+min_drought <- min(Mydata$`Quel est en moyenne le nombre secheresse / poches de sécheresse survenu pendant les 3 dernières années ?`)
+ND2_rescaled <- scales::rescale(as.numeric(ND2$resultats_dr.moyenne_ponderee), to = c(0, 1), from = c(min_drought, max_drought))
+
+# ND3 score of type season
+ND3 <- data.frame(resultats_ts$moyenne_ponderee)
+max_score <- max(type_season$score)
+min_score <- min(type_season$score)
+ND3_rescaled <- scales::rescale(as.numeric(ND3$resultats_ts.moyenne_ponderee), to = c(0, 1), from = c(min_score, max_score))
+
+# Load climate data
+climate_data <- read_csv2("climate_data.csv")
+
+ND4 <- data.frame(climate_data[1,2:4])
+max_sd_tmax <- max(climate_data$Max[1])
+min_sd_tmax <- min(climate_data$Min[1])
+ND4_rescaled <- scales::rescale(as.numeric(ND4), to = c(0, 1), from = c(min_sd_tmax, max_sd_tmax))
+
+ND5 <- data.frame(climate_data[2,2:4])
+max_sd_tmin <- max(climate_data$Max[2])
+min_sd_tmin <- min(climate_data$Min[2])
+ND5_rescaled <- scales::rescale(as.numeric(ND5), to = c(0, 1), from = c(min_sd_tmin, max_sd_tmin))
+
+ND6 <- data.frame(climate_data[3,2:4])
+max_sd_pr <- max(climate_data$Max[3])
+min_sd_pr <- min(climate_data$Min[3])
+ND6_rescaled <- scales::rescale(as.numeric(ND6), to = c(0, 1), from = c(min_sd_pr, max_sd_pr))
 
 # Combine the normalized data into a single data frame
-ND <- data.frame(rbind(ND_Kongoussi, ND_Leo, ND_Gaoua))
+ND <- data.frame((ND1_rescaled+ND2_rescaled+ND3_rescaled+ND4_rescaled+ND5_rescaled+ND6_rescaled)/6)
 
 # Combine all LVI components into a single data frame
 overall_table <- cbind(SDP, LS, SN, F_, W, H, L, I, ND)
@@ -493,8 +539,6 @@ lvi_ipcc_table$rowname <- str_replace(lvi_ipcc_table$rowname, "E_", "")
 write_csv2(lvi_ipcc_table, "LVI_IPCC.csv")
 
 LVI_IPCC <- (Expo - cap_adap)*Sens
-
-
 
 
 # Bigger table
