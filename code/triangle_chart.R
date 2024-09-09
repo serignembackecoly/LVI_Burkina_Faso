@@ -50,7 +50,7 @@ library(fmsb)
 library(Cairo)
 
 # Load data
-lvi_ipcc <- read_csv2("LVI_IPCC.csv")
+lvi_ipcc <- read_csv2("data/LVI_IPCC.csv")
 
 # Create maximum and minimum values
 max_values <- data.frame(rbind(rep(0.7, 3)))
@@ -69,7 +69,7 @@ data_ipcc <- data_ipcc[, -1]  # Remove the "rowname" column
 var_names <- c("Adaptive\nCapacity", "Sensitivity", "Exposure")
 
 # Create radar chart
-Cairo("spider_diagram_LVI-IPCC.png", res = 500, height = 15, width = 15, bg = "white", units = "cm")
+Cairo("figure/spider_diagram_LVI-IPCC.png", res = 500, height = 15, width = 15, bg = "white", units = "cm")
 par(mar = c(1, 2, 2, 2))
 radarchart(data_ipcc, axistype = 1,
            cglcol = "gray55", cglty = 1, axislabcol = "black", caxislabels = seq(0, 0.7, 0.1), cglwd = 0.8,
