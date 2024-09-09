@@ -3,7 +3,7 @@ library(tidyverse)
 library(fmsb)
 
 # Load data
-lvi_data <- read_csv2(file = "LVI_score.csv")
+lvi_data <- read_csv2(file = "data/LVI_score.csv")
 
 # Prepare data for radar chart
 data <- lvi_data %>%
@@ -29,7 +29,7 @@ var_names <- c("Socio-Demographic\nProfile", "Livelihood\nStrategies",
                "Land", "Insecurity", "Natural\nDisasters")
 
 # Create radar chart
-Cairo("spider_diagram_LVI.png", res = 500, height = 20, width = 22, units = "cm", bg = "white")
+Cairo("figure/spider_diagram_LVI.png", res = 500, height = 20, width = 22, units = "cm", bg = "white")
 par(mar = c(1, 2, 2, 2))
 radarchart(lvi, axistype = 1,
            cglcol = "gray55", cglty = 1, axislabcol = "black", caxislabels = seq(0, 0.8, 0.1), cglwd = 0.8,
