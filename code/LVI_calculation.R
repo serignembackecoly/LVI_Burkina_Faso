@@ -5,7 +5,6 @@ library(tidyverse)
 library(coin)
 library(scales)
 library(readxl)
-library(fmsb)
 library(tibble)
 library(knitr)
 library(kableExtra)
@@ -66,6 +65,8 @@ colnames(ET_Taille_moyen_menage_ZC) <- c("Provinces (Agro-climatic Zones)", "Sta
 
 # Average field size by agro-climatic zone/village
 Taille_moyen_champ_ZC <- aggregate(Mydata$`Nombre d'hectare` ~ Mydata$`Province (Zone agro-climatique)`, Mydata, mean)
+ET_Taille_moyen_champ_ZC <- aggregate(Mydata$`Nombre d'hectare` ~ Mydata$`Province (Zone agro-climatique)`, Mydata, sd)
+
 colnames(Taille_moyen_champ_ZC) <- c("Provinces (Agro-climatic Zones)", "Average Field Size")
 
 # Create the Type_cult variable: the number of crops cultivated per household
@@ -265,19 +266,19 @@ Leo_crop <- sum(Crop_index[2, 2:8] * Crop_index[4, 2:8]) / sum(Crop_index[2, 2:8
 Gaoua_crop <- sum(Crop_index[3, 2:8] * Crop_index[4, 2:8]) / sum(Crop_index[3, 2:8])
 crop <- data.frame(c(Kongoussi_crop, Leo_crop, Gaoua_crop))
 
-# Calculate the percentage of households able to sustainably save their harvest by province
-Maintain_harvest_HH <- Mydata %>% 
-  count(`Province (Zone agro-climatique)`, `Parvenez vous a économiser votre récolte durablement ?`) %>% 
-  group_by(`Province (Zone agro-climatique)`) %>% 
-  mutate(pct_Economy = prop.table(n))
-Maintain_harvest <- Maintain_harvest_HH[c(1, 3, 5), 4]
-
 # Calculate the percentage of households with less than three types of crops
 cultpro1 <- cultpro[, -c(1)]
 Third_crop_Kongoussi <- sum(cultpro1[1, 1:2]) / sum(cultpro1[1, ])
 Third_crop_Leo <- sum(cultpro1[2, 1:2]) / sum(cultpro1[2, ])
 Third_crop_Gaoua <- sum(cultpro1[3, 1:2]) / sum(cultpro1[3, ])
 Third_crop <- data.frame(c(Third_crop_Kongoussi, Third_crop_Leo, Third_crop_Gaoua))
+
+# Calculate the percentage of households able to sustainably save their harvest by province
+Maintain_harvest_HH <- Mydata %>% 
+  count(`Province (Zone agro-climatique)`, `Parvenez vous a économiser votre récolte durablement ?`) %>% 
+  group_by(`Province (Zone agro-climatique)`) %>% 
+  mutate(pct_Economy = prop.table(n))
+Maintain_harvest <- Maintain_harvest_HH[c(1, 3, 5), 4]
 
 # Calculate the overall food-related index (F) as the average of crop index, harvest maintenance, and third crop metrics
 F_ <- data.frame(crop + Maintain_harvest + Third_crop) / 3
@@ -315,75 +316,86 @@ Toilets_HH <- Mydata %>%
   count(`Province (Zone agro-climatique)`, `Disposez vous d'une latrine familiale pour vos besoins ?`) %>%       
   group_by(`Province (Zone agro-climatique)`) %>%
   mutate(pct_Toilet = prop.table(n))
+Toilets <-Toilets_HH[c(1, 3, 5), 4]
 
 # Calculate the percentage of households with a member suffering from a disability by province
 Handicap_HH <- Mydata %>%
   count(`Province (Zone agro-climatique)`, `Un membre du ménage souffre-t-il d'un handicap ?`) %>%       
   group_by(`Province (Zone agro-climatique)`) %>%
   mutate(pct_Handicap = prop.table(n))
+Handicap <- Handicap_HH[c(2, 4, 6), 4]
 
 # Calculate the percentage of households with a member suffering from a chronic illness by province
 Chronical_ill_HH <- Mydata %>%
   count(`Province (Zone agro-climatique)`, `Un membre du ménage souffre-t-il d'une maladie chronique ?`) %>%       
   group_by(`Province (Zone agro-climatique)`) %>%
   mutate(pct_illness = prop.table(n))
-
+Chronical_ill <- Chronical_ill_HH[c(2, 4, 6), 4]
 # Calculate the Health index (H) as the average of chronic illness, disability, and toilet access percentages
-H <- (Chronical_ill_HH[c(2, 4, 6), 4] + Handicap_HH[c(2, 4, 6), 4] + Toilets_HH[c(1, 3, 5), 4]) / 3
+H <- ( Chronical_ill + Handicap + Toilets) / 3
 
 ## LAND (L) ##
+# Define constants for land size proportions
+ave_farm_size <- Taille_moyen_champ_ZC$`Average Field Size` # Mean
+sd_farm_size <- ET_Taille_moyen_champ_ZC$`Mydata$\`Nombre d'hectare\`` # Standard deviation
+max_farm <- max(Mydata$`Nombre d'hectare`)
+min_farm <- min(Mydata$`Nombre d'hectare`)
+Farm_size <- scales::rescale(ave_farm_size, to = c(0, 1), from = c(min_farm, max_farm))
 
-# Calculate the percentage of households that own the land they farm, by province
-Land_HH <- Mydata %>%
-  count(`Province (Zone agro-climatique)`, `Etes vous vous même propriétaire de ces terres ?`) %>%       
-  group_by(`Province (Zone agro-climatique)`) %>%
-  mutate(pct_Land = prop.table(n))
-L1 <- Land_HH[c(1, 3, 5), 4]
+# Less farm size more vulnerabilty
+Farm_size <- 1 - Farm_size
+
 
 # Calculate the proportion of households with less than 2 hectares of land, by province
 Small_Ha <- Mydata$`Province (Zone agro-climatique)`[Mydata$`Nombre d'hectare` < 2]
 A <- table(Small_Ha)
 B <- table(Mydata$`Province (Zone agro-climatique)`)
-L2[Small_Ha] <- A / B
+Less_2_hectares <- A / B
 
-# Define constants for land size proportions
-L333 <- Taille_moyen_champ_ZC
-L33 <- c(0.768, 0.951, 0.882)
-L3 <- 1 - L33
+# Calculate the percentage of households that own the land they farm, by province
+Land_owner_HH <- Mydata %>%
+  count(`Province (Zone agro-climatique)`, `Etes vous vous même propriétaire de ces terres ?`) %>%       
+  group_by(`Province (Zone agro-climatique)`) %>%
+  mutate(pct_Land = prop.table(n))
+Land_owner <- Land_owner_HH[c(1, 3, 5), 4]
 
 # Calculate the Land index (L) as the average of land ownership, small land proportion, and inverse land size proportion
-L <- (L1 + L2 + L3) / 3
+L <- (Farm_size + Less_2_hectares + Land_owner) / 3
 
 
 ## INSTITUTIONAL (I) #
 #(ACLED DATA on the MAP)
 
-# Create a matrix representing the number of incidents of terrorism and protest by province
-Insecurity <- matrix(data = c(212, 5, 57, 31, 5, 42), byrow = TRUE, ncol = 3, nrow = 2,
-                     dimnames = list(c("terrorism", "protest"), c("Kongoussi", "Leo", "Gaoua")))
+# Load the number of incidents of terrorism and protest by province
 
-# Define maximum values for normalization
-max_terrorism <- 219 + 165 + 99 + 254
-max_protest <- 64 + 12
+Insecurity <- read_csv2("insecurity_events.csv") # terrorism refers to act against civilian in ACLED database
+                                                 # protest refers to protest/riots in the database
+                                                  
+# Define maximum and minimum values for normalization
+max_terrorism <- Insecurity$Max_Burkina[1] # The highest number of terrorism event in a province
+max_protest <- Insecurity$Max_Burkina[2]   # The highest number of protest event in a province
+
+min_terrorism <- Insecurity$Min_Burkina[1]
+min_protest <- Insecurity$Min_Burkina[2]
 
 # Normalize the data for terrorism incidents
-Insecurity[1, 1] <- (Insecurity[1, 1] - 1) / (max_terrorism - 1)
-Insecurity[1, 2] <- (Insecurity[1, 2] - 1) / (max_terrorism - 1)
-Insecurity[1, 3] <- (Insecurity[1, 3] - 1) / (max_terrorism - 1)
+Insecurity[1, 2] <- (Insecurity[1, 2] - min_terrorism) / (max_terrorism - min_terrorism)
+Insecurity[1, 3] <- (Insecurity[1, 3] - min_terrorism) / (max_terrorism - min_terrorism)
+Insecurity[1, 4] <- (Insecurity[1, 4] - min_terrorism) / (max_terrorism - min_terrorism)
 
 # Normalize the data for protest incidents
-Insecurity[2, 1] <- (Insecurity[2, 1] - 1) / (max_protest - 1)
 Insecurity[2, 2] <- (Insecurity[2, 2] - 1) / (max_protest - 1)
 Insecurity[2, 3] <- (Insecurity[2, 3] - 1) / (max_protest - 1)
+Insecurity[2, 4] <- (Insecurity[2, 4] - 1) / (max_protest - 1)
 
 # Weight the normalized values: 80% for terrorism and 20% for protest
-Insecurity[1, ] <- Insecurity[1, ] * 0.8
-Insecurity[2, ] <- Insecurity[2, ] * 0.2
+Insecurity[1, 2:4] <- Insecurity[1, 2:4] * 0.8 # The impact of both is different in the livelihood
+Insecurity[2, 2:4] <- Insecurity[2, 2:4] * 0.2
 
 # Calculate and display the summed values for each province
-I_Kongoussi <- sum(Insecurity[, 1])
-I_Leo <- sum(Insecurity[, 2])
-I_Gaoua <- sum(Insecurity[, 3])
+I_Kongoussi <- sum(Insecurity[, 2])
+I_Leo <- sum(Insecurity[, 3])
+I_Gaoua <- sum(Insecurity[, 4])
 
 # Create a data frame with the final values for each province
 I <- data.frame(rbind(I_Kongoussi, I_Leo, I_Gaoua))
@@ -463,6 +475,27 @@ my_table_lvi[2:4] <- round(my_table_lvi[2:4], 3)
 my_table_lvi %>%
   kable() %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "bordered"))
+# Save the final result
+write_csv2(my_table_lvi, "LVI_score.csv")
+
+######################
+#Calculation LVI IPCC#
+######################
+adaptative_capacity <- (SDP*4 + LS*4 + SN*4)/12
+sensitivity <- (F_*3 + W*2 + H*3 + L*3 )/11
+exposure <- (I*2 + ND*6)/8
+lvi_ipcc_table <- cbind(cap_adap, sensitivity, exposure)
+colnames(lvi_ipcc_table) <- c('Adaptative Capacity', "Sensitivity", "Exposure")
+lvi_ipcc_table <- lvi_ipcc_table %>% 
+                  rownames_to_column()
+lvi_ipcc_table$rowname <- str_replace(lvi_ipcc_table$rowname, "E_", "")
+
+write_csv2(lvi_ipcc_table, "LVI_IPCC.csv")
+
+LVI_IPCC <- (Expo - cap_adap)*Sens
+
+
+
 
 # Bigger table
 tbSDP <- cbind(Education, Sexe_Head_Household, Household_size, Dependancy_Ratio)
