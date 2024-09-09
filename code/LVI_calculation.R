@@ -11,14 +11,14 @@ library(kableExtra)
 
 
 # Set the working directory
-setwd("C:/Users/Serigne Mbacké/Desktop/LVI")
+#setwd("C:/Users/Serigne Mbacké/Desktop/LVI")
 
 # Load the survey data
-Mydata <- read_csv2(file = "Enquête_sur_les_ménages_au_BFA_2022-05-10.csv")
+Mydata <- read_csv2(file = "data/Enquête_sur_les_ménages_au_BFA_2022-05-10.csv")
 
 # Load the indexes of the 600 households selected in Excel after cleaning missing
 # values, outliers, and inconsistencies
-Index_households <- read_excel("C:/Users/Serigne Mbacké/Desktop/LVI/Index_households.xlsx")
+Index_households <- read_excel("data/Index_households.xlsx")
 
 # Filter the dataset to include only selected households
 Mydata <- subset(Mydata, Index %in% c(Index_households$Mydata_pure.Index))
@@ -469,7 +469,7 @@ min_score <- min(type_season$score)
 ND3_rescaled <- scales::rescale(as.numeric(ND3$resultats_ts.moyenne_ponderee), to = c(0, 1), from = c(min_score, max_score))
 
 # Load climate data
-climate_data <- read_csv2("climate_data.csv")
+climate_data <- read_csv2("data/climate_data.csv")
 
 ND4 <- data.frame(climate_data[1,2:4])
 max_sd_tmax <- max(climate_data$Max[1])
@@ -522,23 +522,37 @@ my_table_lvi %>%
   kable() %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "bordered"))
 # Save the final result
-write_csv2(my_table_lvi, "LVI_score.csv")
+write_csv2(my_table_lvi, "data/LVI_score.csv")
 
 ######################
 #Calculation LVI IPCC#
 ######################
-adaptative_capacity <- (SDP*4 + LS*4 + SN*4)/12
-sensitivity <- (F_*3 + W*2 + H*3 + L*3 )/11
-exposure <- (I*2 + ND*6)/8
-lvi_ipcc_table <- cbind(cap_adap, sensitivity, exposure)
-colnames(lvi_ipcc_table) <- c('Adaptative Capacity', "Sensitivity", "Exposure")
+# Calculate adaptive capacity using weighted sum of SDP, LS, and SN
+adaptative_capacity <- (SDP * 4 + LS * 4 + SN * 4) / 12
+
+# Calculate sensitivity using weighted sum of F_, W, H, and L
+sensitivity <- (F_ * 3 + W * 2 + H * 3 + L * 3) / 11
+
+# Calculate exposure using weighted sum of I and ND
+exposure <- (I * 2 + ND * 6) / 8
+
+# Combine the calculated indices into a single data frame
+lvi_ipcc_table <- cbind(adaptative_capacity, sensitivity, exposure)
+
+# Set column names for the data frame
+colnames(lvi_ipcc_table) <- c('Adaptative Capacity', 'Sensitivity', 'Exposure')
+
+# Add row names as a column to the data frame and remove prefix "E_"
 lvi_ipcc_table <- lvi_ipcc_table %>% 
-                  rownames_to_column()
-lvi_ipcc_table$rowname <- str_replace(lvi_ipcc_table$rowname, "E_", "")
+  rownames_to_column() %>% 
+  mutate(rowname = str_replace(rowname, "E_", ""))
 
-write_csv2(lvi_ipcc_table, "LVI_IPCC.csv")
+# Save the data frame to a CSV file
+write_csv2(lvi_ipcc_table, "data/LVI_IPCC.csv")
 
-LVI_IPCC <- (Expo - cap_adap)*Sens
+# Calculate the LVI_IPCC using the formula
+LVI_IPCC <- (exposure - adaptative_capacity) * sensitivity
+
 
 
 # Bigger table
