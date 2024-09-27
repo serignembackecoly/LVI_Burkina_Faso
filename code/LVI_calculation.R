@@ -16,13 +16,6 @@ library(kableExtra)
 # Load the survey data
 Mydata <- read_csv2(file = "data/Enquête_sur_les_ménages_au_BFA_2022-05-10.csv")
 
-# Load the indexes of the 600 households selected in Excel after cleaning missing
-# values, outliers, and inconsistencies
-Index_households <- read_excel("data/Index_households.xlsx")
-
-# Filter the dataset to include only selected households
-Mydata <- subset(Mydata, Index %in% c(Index_households$Mydata_pure.Index))
-
 # Display the distribution of provinces (agro-climatic zones)
 table(Mydata$`Province (Zone agro-climatique)`)
 
