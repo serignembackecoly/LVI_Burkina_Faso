@@ -24,12 +24,12 @@ rownames(lvi) <- lvi$group
 lvi <- lvi[, -1]  # Remove the "group" column
 
 # Radar chart parameters
-var_names <- c("Socio-Demographic\nProfile", "Livelihood\nStrategies",
-               "Social\nNetwork", "Food", "Water", "Health",
-               "Land", "Insecurity", "Natural\nDisasters")
+var_names <- c("Profile \n Socio-Demographique", "Stratégies \n de Subsitance",
+               "Liens \n Sociaux", "Alimentation", "Eau", "Santé",
+               "Foncier", "Insécurité", "Catastrophes \nNaturelles")
 
 # Create radar chart
-Cairo("figure/spider_diagram_LVI.png", res = 500, height = 20, width = 22, units = "cm", bg = "white")
+Cairo::Cairo("figure/spider_diagram_LVI_french.png", res = 500, height = 20, width = 22, units = "cm", bg = "white")
 par(mar = c(1, 2, 2, 2))
 radarchart(lvi, axistype = 1,
            cglcol = "gray55", cglty = 1, axislabcol = "black", caxislabels = seq(0, 0.8, 0.1), cglwd = 0.8,
@@ -43,5 +43,5 @@ legend(
   bty = "n", pch = 16, col = c("red", "blue", "green"),
   text.col = "black", cex = 1.2, pt.cex = 1.2
 )
-par(op)
+#par(op)
 dev.off()
